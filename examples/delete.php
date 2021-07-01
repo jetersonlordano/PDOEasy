@@ -1,25 +1,27 @@
 <?php
 
-define('DS', DIRECTORY_SEPARATOR);
+/**
+ * SQL Select com PDOEasy
+ * @author Jeterson Lordano <jetersonlordano@gmail.com>
+ */
 
-define('DATA_BASE', [
-    'host' => 'localhost',
-    'db' => 'tutoriais',
-    'user' => 'root',
-    'psw' => '',
-]);
-
-require_once dirname(__DIR__) . DS . 'source' . DS . 'Models' . DS . 'Database' . DS . 'PDOEasy.class.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'Config.inc.php';
 
 use Models\Database\PDOEasy;
 
 /**
- * Delete simples na tabela users
+ * Instância da classe PDOEasy
  */
-$conn = new PDOEasy();
-$conn->params = ['id' => 8];
 
+$conn = new PDOEasy();
+
+/**
+ * Instância da classe PDOEasy
+ */
+
+$conn->params = ['id' => 1];
 $conn->delete('users');
 $conn->where('id = :id');
 $conn->limit(1);
-$conn->exec();
+var_dump($conn->query);
+var_dump($conn->exec());

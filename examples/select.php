@@ -1,17 +1,17 @@
 <?php
 
-define('DS', DIRECTORY_SEPARATOR);
+/**
+ * SQL Select com PDOEasy
+ * @author Jeterson Lordano <jetersonlordano@gmail.com>
+ */
 
-define('DATA_BASE', [
-    'host' => 'localhost',
-    'db' => 'tutoriais',
-    'user' => 'root',
-    'psw' => '',
-]);
-
-require_once dirname(__DIR__) . DS . 'source' . DS . 'Models' . DS . 'Database' . DS . 'PDOEasy.class.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'Config.inc.php';
 
 use Models\Database\PDOEasy;
+
+/**
+ * Instância da classe PDOEasy
+ */
 
 $conn = new PDOEasy();
 
@@ -20,51 +20,62 @@ $conn = new PDOEasy();
  */
 
 $conn->select('users');
-$conn->exec();
-$result = $conn->fetchAll();
-var_dump($result);
+//$conn->exec();
+//$result = $conn->fetchAll();
+//var_dump($result);
 
 /**
  * Obter o nome e o email dos usuário
  */
 $conn->select('users', 'name, email');
-$conn->exec();
-$result = $conn->fetchAll();
+// $conn->exec();
+// $result = $conn->fetchAll()[0] ?? [];
+// var_dump($result);
 
 /**
  * Obter o nome do usuário onde o id = 1
  */
+$conn->params = ['id' => 1];
 $conn->select('users', 'name');
 $conn->where('id = :id');
-$conn->exec();
-$user_name = $conn->fetchAll()[0]['name'] ?? null;
+// $conn->exec();
+// $user_name = $conn->fetchAll()[0]['name'] ?? null;
+// var_dump($user_name);
 
 /**
- * Adicionar um limite o ordernar os dados
+ * Adicionar um limite o ordenar os dados
  */
-$conn->select('users');
+$conn->select('works', 'name');
 $conn->order('name ASC');
 $conn->limit(2);
-$result = $conn->fetchAll();
+// $conn->exec();
+// $result = $conn->fetchAll();
+// var_dump($result);
 
 /**
  * Select com Join
+ * INNER JOIN é padrão
  */
-$conn->select('users u', 'u.name name, w.name profissao');
-$conn->join('works w', 'w.id', 'u.work_id', 'INNER JOIN');
-$conn->exec();
-$resutl = $conn->fetchAll();
+$conn->select('users u', 'u.name name, w.name w_name');
+$conn->join('works w', 'w.id', 'u.work_id');
+// $conn->exec();
+// $result = $conn->fetchAll() ?? [];
+// var_dump($result);
 
 /**
- * Select com Limit e Offeset
+ * Select com Limit e Offset
  * SQL_CALC_FOUND_ROWS para fazer paginação
  */
-$conn->select('users', '*', true);
-$conn->limit(10, 0);
-$conn->exec();
-$result = $conn->fetchAll();
+$limit = 2;
+$offset = 0;
+$conn->select('works', '*', true);
+$conn->limit($limit, $offset);
+// $conn->exec();
+// $result = $conn->fetchAll();
+// var_dump($result);
 
 /**
- * Repete a query anterior sem o paramentro LIMIT
+ * Repete a query anterior sem o parâmetro LIMIT
  */
-$total_users = $conn->foundRows();
+// $total_users = $conn->foundRows();
+// var_dump($total_users);

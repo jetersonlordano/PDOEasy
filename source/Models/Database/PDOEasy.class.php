@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Class PHPEasy
+ * Class PHPEasy - PDO extension abstraction
  * @author Jeterson Lordano <https://github.com/jetersonlordano>
  */
 
@@ -17,13 +17,22 @@ class PDOEasy
     public $query;
 
     /**  @var array */
-    public $params = [];
+    public $params;
 
     /** @var string */
-    public $db_name = DATA_BASE['db'];
+    private $host;
 
     /** @var string */
-    public $error;
+    private $dbname;
+
+    /** @var string */
+    private $port;
+
+    /** @var string */
+    private $user;
+
+    /** @var string */
+    private $psw;
 
     /** @var object */
     private $statement;
@@ -31,12 +40,26 @@ class PDOEasy
     /** @var object */
     private $connection;
 
+    /** @var string */
+    private $error;
+
+    /**
+     * @param array $config
+     */
+    public function __construct(array $config = null)
+    {
+        $this->host   = $config['host'] ?? DATA_BASE['host'];
+        $this->dbname = $config['db']   ?? DATA_BASE['db'];
+        $this->port   = $config['port'] ?? DATA_BASE['port'];
+        $this->user   = $config['user'] ?? DATA_BASE['user'];
+        $this->psw    = $config['psw']  ?? DATA_BASE['psw'];
+    }
+
     /**
      * SQL Select
      * @param string $table
      * @param string $columns
      * @param boolean $found_rows
-     * @return void
      */
     public function select(string $table, string $columns = '*', bool $found_rows = false)
     {
@@ -46,12 +69,11 @@ class PDOEasy
     /**
      * SQL Insert
      * @param string $table
-     * @return void
      */
     public function insert(string $table)
     {
         $columns = implode(", ", array_keys($this->params));
-        $params = str_replace(', ', ', :', $columns);
+        $params  = str_replace(', ', ', :', $columns);
         $this->query = "INSERT INTO {$table} ({$columns}) values (:{$params})";
     }
 
@@ -59,7 +81,6 @@ class PDOEasy
      * SQL Update
      * @param string $table
      * @param string $columns
-     * @return void
      */
     public function update(string $table, string $columns)
     {
@@ -69,7 +90,6 @@ class PDOEasy
     /**
      * SQL Delete
      * @param string $table
-     * @return void
      */
     public function delete(string $table)
     {
@@ -82,7 +102,6 @@ class PDOEasy
      * @param string $primary_key
      * @param string $foreign_key
      * @param string $type
-     * @return void
      */
     public function join(string $table, string $primary_key, string $foreign_key, string $type = 'INNER JOIN')
     {
@@ -92,7 +111,6 @@ class PDOEasy
     /**
      * SQL Where
      * @param string $terms
-     * @return void
      */
     public function where(string $terms)
     {
@@ -102,7 +120,6 @@ class PDOEasy
     /**
      * SQL Group
      * @param string $columns
-     * @return void
      */
     public function group(string $group_by)
     {
@@ -112,7 +129,6 @@ class PDOEasy
     /**
      * SQL ORDER
      * @param string $columns
-     * @return void
      */
     public function order(string $order_by)
     {
@@ -123,11 +139,10 @@ class PDOEasy
      * SQL Limit
      * @param integer $limit
      * @param integer $offset
-     * @return void
      */
-    public function limit(int $limit, int $offset = null)
+    public function limit(int $limit = 1, int $offset = null)
     {
-        $this->query .= " LIMIT {$offset}" . ($offset ? ', ' : null) . "{$limit}";
+        $this->query .= " LIMIT " . (is_null($offset) ? "{$limit}" : "{$offset}, {$limit}");
     }
 
     /**
@@ -159,13 +174,25 @@ class PDOEasy
     }
 
     /**
+     * @return mixed
+     */
+    public function debug()
+    {
+        return $this->error;
+    }
+
+    /**
      * SQL Execute
      * @return boolean
      */
     public function exec(): bool
     {
 
-        $this->connection = $this->connection ?? $this->connect();
+        $this->connection = $this->connect();
+
+        if (!$this->connection) {
+            return false;
+        }
 
         if (!$this->query) {
             return $this->connection;
@@ -173,7 +200,7 @@ class PDOEasy
 
         $this->statement = $this->connection->prepare($this->query);
 
-        foreach ($this->params as $key => $value) {
+        foreach ($this->params ?? [] as $key => $value) {
             $this->statement->bindParam(":" . $key, $this->params[$key], PDO::PARAM_STR);
         }
 
@@ -185,18 +212,12 @@ class PDOEasy
      */
     private function safe(): bool
     {
-
         if (strpos($this->query, 'DELETE') === false && strpos($this->query, 'UPDATE') === false) {
             return true;
         }
 
-        if (strpos($this->query, 'WHERE') === false) {
-            $this->error = "Defina uma condição [WHERE] para está ação";
-            return false;
-        }
-
-        if (strpos($this->query, 'LIMIT') === false) {
-            $this->error = "Defina um limite [LIMIT] para está ação";
+        if (strpos($this->query, 'WHERE') === false || strpos($this->query, 'LIMIT') === false) {
+            $this->error = "WHERE and LIMIT parameters are required";
             return false;
         }
 
@@ -206,26 +227,25 @@ class PDOEasy
     /**
      * @return PDO||null
      */
-    private function connect()
+    private function connect(): ?PDO
     {
-        try {
-
-            $PDO = new PDO('mysql:host=' . DATA_BASE['host'] . ";dbname={$this->db_name};",
-                DATA_BASE['user'],
-                DATA_BASE['psw'],
-                [
-                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES UTF8",
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_CASE => PDO::CASE_NATURAL,
-                ]
-            );
-
-        } catch (PDOException $exception) {
-            $this->error = $exception;
-            return;
+        if (!$this->connection) {
+            try {
+                $this->connection = new PDO(
+                    "mysql:host={$this->host};dbname={$this->dbname};port={$this->port};",
+                    $this->user,
+                    $this->psw,
+                    [
+                        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES UTF8",
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_CASE => PDO::CASE_NATURAL,
+                    ]
+                );
+            } catch (PDOException $exception) {
+                $this->error = $exception;
+            }
         }
-
-        return $PDO;
+        return $this->connection;
     }
 }

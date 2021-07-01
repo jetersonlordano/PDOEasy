@@ -1,17 +1,17 @@
 <?php
 
-define('DS', DIRECTORY_SEPARATOR);
+/**
+ * SQL Select com PDOEasy
+ * @author Jeterson Lordano <jetersonlordano@gmail.com>
+ */
 
-define('DATA_BASE', [
-    'host' => 'localhost',
-    'db' => 'tutoriais',
-    'user' => 'root',
-    'psw' => '',
-]);
-
-require_once dirname(__DIR__) . DS . 'source' . DS . 'Models' . DS . 'Database' . DS . 'PDOEasy.class.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'Config.inc.php';
 
 use Models\Database\PDOEasy;
+
+/**
+ * Instância da classe PDOEasy
+ */
 
 $conn = new PDOEasy();
 
@@ -21,9 +21,9 @@ $conn = new PDOEasy();
 $conn->params = [
     'name' => 'Maria da Silva',
     'email' => 'mariadasilva@email.com',
-    'id' => 8,
+    'id' => 1,
 ];
 $conn->update('users', 'name = :name, email = :email');
 $conn->where('id = :id');
-$conn->limit(1);
-$conn->exec(); // Retorna true ou false
+$conn->limit();
+var_dump($conn->exec());  // Retorna true ou false
